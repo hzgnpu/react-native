@@ -22,8 +22,9 @@ RCT_EXPORT_MODULE()
 {
   RCTSlider *slider = [RCTSlider new];
   [slider addTarget:self action:@selector(sliderValueChanged:) forControlEvents:UIControlEventValueChanged];
-  [slider addTarget:self action:@selector(sliderTouchEnd:) forControlEvents:UIControlEventTouchUpInside];
-  [slider addTarget:self action:@selector(sliderTouchEnd:) forControlEvents:UIControlEventTouchUpOutside];
+  [slider addTarget:self action:@selector(sliderTouchEnd:) forControlEvents:(UIControlEventTouchUpInside |
+                                                                             UIControlEventTouchUpOutside |
+                                                                             UIControlEventTouchCancel)];
   return slider;
 }
 
@@ -53,5 +54,13 @@ RCT_EXPORT_VIEW_PROPERTY(maximumValue, float);
 RCT_EXPORT_VIEW_PROPERTY(minimumTrackTintColor, UIColor);
 RCT_EXPORT_VIEW_PROPERTY(maximumTrackTintColor, UIColor);
 RCT_EXPORT_VIEW_PROPERTY(onChange, RCTBubblingEventBlock);
+RCT_CUSTOM_VIEW_PROPERTY(disabled, BOOL, RCTSlider)
+{
+  if (json) {
+    view.enabled = !([RCTConvert BOOL:json]);
+  } else {
+    view.enabled = defaultView.enabled;
+  }
+}
 
 @end

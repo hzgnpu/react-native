@@ -9,6 +9,10 @@
 
 package com.facebook.react.views.scroll;
 
+import java.lang.Override;
+
+import android.support.v4.util.Pools;
+
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.uimanager.PixelUtil;
@@ -20,16 +24,19 @@ import com.facebook.react.uimanager.events.RCTEventEmitter;
  */
 public class ScrollEvent extends Event<ScrollEvent> {
 
+  private static final Pools.SynchronizedPool<ScrollEvent> EVENTS_POOL =
+      new Pools.SynchronizedPool<>(3);
+
   public static final String EVENT_NAME = "topScroll";
 
-  private final int mScrollX;
-  private final int mScrollY;
-  private final int mContentWidth;
-  private final int mContentHeight;
-  private final int mScrollViewWidth;
-  private final int mScrollViewHeight;
+  private int mScrollX;
+  private int mScrollY;
+  private int mContentWidth;
+  private int mContentHeight;
+  private int mScrollViewWidth;
+  private int mScrollViewHeight;
 
-  public ScrollEvent(
+  public static ScrollEvent obtain(
       int viewTag,
       long timestampMs,
       int scrollX,
@@ -38,7 +45,40 @@ public class ScrollEvent extends Event<ScrollEvent> {
       int contentHeight,
       int scrollViewWidth,
       int scrollViewHeight) {
-    super(viewTag, timestampMs);
+    ScrollEvent event = EVENTS_POOL.acquire();
+    if (event == null) {
+      event = new ScrollEvent();
+    }
+    event.init(
+        viewTag,
+        timestampMs,
+        scrollX,
+        scrollY,
+        contentWidth,
+        contentHeight,
+        scrollViewWidth,
+        scrollViewHeight);
+    return event;
+  }
+
+  @Override
+  public void onDispose() {
+    EVENTS_POOL.release(this);
+  }
+
+  private ScrollEvent() {
+  }
+
+  private void init(
+      int viewTag,
+      long timestampMs,
+      int scrollX,
+      int scrollY,
+      int contentWidth,
+      int contentHeight,
+      int scrollViewWidth,
+      int scrollViewHeight) {
+    super.init(viewTag, timestampMs);
     mScrollX = scrollX;
     mScrollY = scrollY;
     mContentWidth = contentWidth;
@@ -64,6 +104,12 @@ public class ScrollEvent extends Event<ScrollEvent> {
   }
 
   private WritableMap serializeEventData() {
+    WritableMap contentInset = Arguments.createMap();
+    contentInset.putDouble("top", 0);
+    contentInset.putDouble("bottom", 0);
+    contentInset.putDouble("left", 0);
+    contentInset.putDouble("right", 0);
+
     WritableMap contentOffset = Arguments.createMap();
     contentOffset.putDouble("x", PixelUtil.toDIPFromPixel(mScrollX));
     contentOffset.putDouble("y", PixelUtil.toDIPFromPixel(mScrollY));
@@ -77,6 +123,7 @@ public class ScrollEvent extends Event<ScrollEvent> {
     layoutMeasurement.putDouble("height", PixelUtil.toDIPFromPixel(mScrollViewHeight));
 
     WritableMap event = Arguments.createMap();
+    event.putMap("contentInset", contentInset);
     event.putMap("contentOffset", contentOffset);
     event.putMap("contentSize", contentSize);
     event.putMap("layoutMeasurement", layoutMeasurement);
